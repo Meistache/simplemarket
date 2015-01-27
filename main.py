@@ -53,7 +53,9 @@ player_node = Player('')
 beingManager = BeingManager()
 user_tree = tradey.UserTree()
 sale_tree = tradey.ItemTree()
+delisted_tree = tradey.DelistedTree()
 ItemLog = utils.ItemLog()
+DelistedLog = utils.DelistedLog()
 logger = logging.getLogger('ManaLogger')
 
 def process_whisper(nick, msg, mapserv):
@@ -90,7 +92,7 @@ def process_whisper(nick, msg, mapserv):
             mapserv.sendall(whisper(nick, "No items for sale."))
 
         for elem in sale_tree.root:
-            if time.time() - float(elem.get('add_time')) < config.relist_time: # Check if an items time is up.
+            if time.time() - float(elem.get('add_time')) < config.delist_time: # Check if an items time is up.
                 msg = "[selling] [" + elem.get("uid") + "] " + elem.get("amount") + " [@@" + \
                 elem.get("itemId") + "|" + ItemDB.getItem(int(elem.get("itemId"))).name + "@@] for " + elem.get("price") + "gp each"
                 mapserv.sendall(whisper(nick, msg))
@@ -157,7 +159,7 @@ def process_whisper(nick, msg, mapserv):
         # Sends help information
         if len(broken_string) == 1:
             mapserv.sendall(whisper(nick, "Welcome to ManaMarket!"))
-            mapserv.sendall(whisper(nick, "The basic commands for the bot are: !list, !find <id> or <Item Name>, !buy <amount> <uid>, !add <amount> <price> <Item Name>, !money, !relist <uid>, !info, !getback <uid> "))
+            mapserv.sendall(whisper(nick, "The basic commands for the bot are: !list, !find <id> or <Item Name>, !buy <amount> <uid>, !add <amount> <price> <Item Name>, !money, !info, !getback <uid> "))
             mapserv.sendall(whisper(nick, "For a detailed description of each command, type !help <command> e.g. !help !buy"))
             mapserv.sendall(whisper(nick, "For example to purchase an item shown in the list as:"))
             mapserv.sendall(whisper(nick, "[selling] [6] 5 [@@640|Iron Ore@@] for 1000gp each"))
@@ -189,8 +191,6 @@ def process_whisper(nick, msg, mapserv):
                 mapserv.sendall(whisper(nick, "!add <amount> <price> <Item Name> - Add an item to the sell list (requires that you have an account)."))
             elif broken_string[1] == '!money':
                 mapserv.sendall(whisper(nick, "!money - Allows you to collect money for any sales made on your behalf."))
-            elif broken_string[1] == '!relist':
-                mapserv.sendall(whisper(nick, "!relist <uid> - Allows you to relist an item which has expired."))
             elif broken_string[1] == '!info':
                 mapserv.sendall(whisper(nick, "!info - Displays basic information about your account."))
             elif broken_string[1] == '!getback':
@@ -560,12 +560,6 @@ def process_whisper(nick, msg, mapserv):
         elif check == -10:
             mapserv.sendall(whisper(nick, "User removal failed. Please check spelling."))
 
-    elif broken_string[0] == "!relist":
-        # Relist an item which has expired - !relist <uid>.
-        if user == -10 or len(broken_string) != 2:
-            mapserv.sendall(whisper(nick, "Syntax incorrect."))
-            return
-
         if int(user.get("accesslevel")) < 5:
             mapserv.sendall(whisper(nick, "You don't have the correct permissions."))
             return
@@ -582,6 +576,7 @@ def process_whisper(nick, msg, mapserv):
                 mapserv.sendall(whisper(nick, "That doesn't belong to you!"))
                 return
 
+            """
             time_relisted = int(item_info.get('relisted'))
 
             if int(item_info.get('relisted')) < 3:
@@ -594,6 +589,7 @@ def process_whisper(nick, msg, mapserv):
             else:
                 mapserv.sendall(whisper(nick, "This item can no longer be relisted. Please collect it using !getback "+str(uid)+"."))
                 return
+            """
         else:
             mapserv.sendall(whisper(nick, "Syntax incorrect."))
 

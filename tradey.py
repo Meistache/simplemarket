@@ -27,12 +27,13 @@ class UserTree:
         self.tree = ElementTree(file="data/user.xml")
         self.root = self.tree.getroot()
 
-    def add_user(self, name, stalls, al):
+    def add_user(self, name, stalls, delisted, al):
         if self.get_user(name) == -10:
             user = SubElement(self.root, "user")
             user.set("name", name)
             user.set("stalls", str(stalls))
             user.set("used_stalls", str(0))
+            user.set("delisted", str(delisted))
             user.set("money", str(0))
             user.set("id", str(0))
             user.set("accesslevel", str(al))
@@ -85,7 +86,6 @@ class ItemTree:
         user.set("itemId", str(item_id))
         user.set("price", str(price))
         user.set("add_time", str(time.time()))
-        user.set("relisted", str(0))
         user.set("amount", str(amount))
         user.set("uid", str(self.getId()))
         self.save()
@@ -108,6 +108,41 @@ class ItemTree:
     def save(self):
         # Be sure to call save() after any changes to the tree.
         f = open('data/sale.xml', 'w')
+        dom = xml.dom.minidom.parseString(clean_xml(tostring(self.root)))
+        f.write(dom.toprettyxml('    '))
+        f.close()
+
+class DelistedTree:
+    def __init__(self):
+        self.tree = ElementTree(file="data/delisted.xml")
+        self.root = self.tree.getroot()
+
+    def add_delisted(self, name, item_id, amount, uid):
+        user = SubElement(self.root, "item")
+        user.set("name", name)
+        user.set("itemId", str(item_id))
+        user.set("amount", str(amount))
+        user.set("uid", str(uid))
+        self.save()
+
+    def get_uid(self, uid):
+        for elem in self.root:
+            if elem.get("uid") == str(uid):
+                return elem
+        return -10
+
+    def remove_item_uid(self, uid):
+        for elem in self.root:
+            if elem.get("uid") == str(uid):
+                self.root.remove(elem)
+                self.remove_id(uid)
+                self.save()
+                return 1
+        return -10
+
+    def save(self):
+        # Be sure to call save() after any changes to the tree.
+        f = open('data/delisted.xml', 'w')
         dom = xml.dom.minidom.parseString(clean_xml(tostring(self.root)))
         f.write(dom.toprettyxml('    '))
         f.close()
