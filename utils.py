@@ -95,7 +95,7 @@ class DelistedLog:
 
     def add_delisted(self, item_id, amount, name):
         file_node = open(self.log_file, 'a')
-        file_node.write(str(item_id)+" "+str(amount)+" "str(name)+" "+str(time.time()))
+        file_node.write(str(item_id)+" "+str(amount)+" "+str(name)+" "+str(time.time()))
         file_node.close()
 
 class TraderState:

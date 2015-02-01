@@ -41,6 +41,7 @@ from net.packet import *
 from net.protocol import *
 from net.packet_out import *
 from player import *
+from storage import *
 import tradey
 import utils
 import eliza
@@ -102,7 +103,7 @@ def process_whisper(nick, msg, mapserv):
         data = '\302\202B1'
 
         for elem in sale_tree.root:
-            if time.time() - float(elem.get('add_time')) < config.relist_time:
+            if time.time() - float(elem.get('add_time')) < config.delist_time:
                 data += utils.encode_str(int(elem.get("itemId")), 2)
                 data += utils.encode_str(int(elem.get("price")), 4)
                 data += utils.encode_str(int(elem.get("amount")), 3)
@@ -133,11 +134,7 @@ def process_whisper(nick, msg, mapserv):
             items_for_sale = False
             for elem in sale_tree.root:
                 if elem.get('name') == nick:
-                    if time.time() - float(elem.get('add_time')) > config.relist_time:
-                        msg = "[expired] ["
-                    else:
-                        msg = "[selling] ["
-
+                    msg = "[selling] ["
                     msg += elem.get("uid") + "] " + elem.get("amount") + " [@@" + elem.get("itemId") + "|" + \
                         ItemDB.getItem(int(elem.get("itemId"))).name + "@@] for " + elem.get("price") + "gp each"
 
@@ -149,6 +146,22 @@ def process_whisper(nick, msg, mapserv):
 
             if items_for_sale == False:
                 mapserv.sendall(whisper(nick, "You have no items for sale."))
+
+            items_for_getback = False 
+            for elem in delisted_tree.root:
+                if elem.get('name') == nick:
+                    msg = "[delisted] ["
+                    msg += elem.get("uid") + "] "+ elem.get("amount") + " [@@" + elem.get("itemId") + "|" + \
+                        ItemDB.getItem(int(elem.get("itemId"))).name + "@@]"
+                    
+                    if items_for_getback == False:
+                        mapserv.sendall(whisper(nick, "You have the following items for getting back:"))
+                        items_for_getback == True
+
+                    mapserv.sendall(whisper(nick, msg))
+            if items_for_getback == False:
+                 mapserv.sendall(whisper(nick, "You have no items for getting back."))
+                     
 
             money = int(user.get('money'))
             mapserv.sendall(whisper(nick, "You have " + str(money) + "gp to collect."))
@@ -238,7 +251,7 @@ def process_whisper(nick, msg, mapserv):
 
         if item.isdigit(): # an id
             for elem in sale_tree.root:
-                if ((time.time() - float(elem.get('add_time'))) < config.relist_time) \
+                if ((time.time() - float(elem.get('add_time'))) < config.delist_time) \
                 and int(elem.get("itemId")) == int(item): # Check if an items time is up.
                     msg = "[selling] [" + elem.get("uid") + "] " + elem.get("amount") + " [@@" + elem.get("itemId") + "|" \
                     + ItemDB.getItem(int(elem.get("itemId"))).name + "@@] for " + elem.get("price") + "gp each"
@@ -246,7 +259,7 @@ def process_whisper(nick, msg, mapserv):
                     items_found = True
         else: # an item name
             for elem in sale_tree.root:
-                if ((time.time() - float(elem.get('add_time'))) < config.relist_time) \
+                if ((time.time() - float(elem.get('add_time'))) < config.delist_time) \
                 and item.lower() in ItemDB.getItem(int(elem.get("itemId"))).name.lower(): # Check if an items time is up.
                     msg = "[selling] [" + elem.get("uid") + "] " + elem.get("amount") + " [@@" + elem.get("itemId") + "|" \
                     + ItemDB.getItem(int(elem.get("itemId"))).name + "@@] for " + elem.get("price") + "gp each"
@@ -566,7 +579,7 @@ def process_whisper(nick, msg, mapserv):
 
         if broken_string[1].isdigit():
             uid = int(broken_string[1])
-            item_info = sale_tree.get_uid(uid)
+            item_info = sale_tree.get_uid(uid) or delisted_tree.get_uid(uid)
 
             if item_info == -10:
                 mapserv.sendall(whisper(nick, "Item not found.  Please check the uid number and try again."))
@@ -576,20 +589,6 @@ def process_whisper(nick, msg, mapserv):
                 mapserv.sendall(whisper(nick, "That doesn't belong to you!"))
                 return
 
-            """
-            time_relisted = int(item_info.get('relisted'))
-
-            if int(item_info.get('relisted')) < 3:
-                sale_tree.get_uid(uid).set('add_time', str(time.time()))
-                sale_tree.get_uid(uid).set('relisted', str(time_relisted + 1))
-                sale_tree.save()
-                mapserv.sendall(whisper(nick, "The item has been successfully relisted."))
-                user_tree.get_user(nick).set('last_use', str(time.time()))
-                user_tree.save()
-            else:
-                mapserv.sendall(whisper(nick, "This item can no longer be relisted. Please collect it using !getback "+str(uid)+"."))
-                return
-            """
         else:
             mapserv.sendall(whisper(nick, "Syntax incorrect."))
 
@@ -608,8 +607,12 @@ def process_whisper(nick, msg, mapserv):
             item_info = sale_tree.get_uid(uid)
 
             if item_info == -10:
-                mapserv.sendall(whisper(nick, "Item not found.  Please check the uid number and try again."))
-                return
+                if delisted_tree.get_uid(uid) != -10:
+                    item_info = delisted_tree.get_uid(uid)
+                    
+                else:
+                    mapserv.sendall(whisper(nick, "Item not found.  Please check the uid number and try again."))
+                    return
 
             if item_info.get('name') != nick:
                 mapserv.sendall(whisper(nick, "That doesn't belong to you!"))
@@ -752,6 +755,7 @@ def main():
     assert mapport
 
     beingManager.container[player_node.id] = Being(player_node.id, 42)
+    storage = Storage(accid)
     mapserv = socket.socket()
     mapserv.connect((mapip, mapport))
     logger.info("Map connected")
@@ -1066,14 +1070,17 @@ def main():
                         commitMessage = "Add"
 
                     elif trader_state.item.get == 0: # !buy \ !getback
-                        seller = sale_tree.get_uid(trader_state.item.uid).get('name')
-                        item = sale_tree.get_uid(trader_state.item.uid)
+                        seller = sale_tree.get_uid(trader_state.item.uid).get('name') or delisted_tree.get_uid(trader_state.item.uid).get('name')
+                        item = sale_tree.get_uid(trader_state.item.uid) or delisted_tree.get_uid(trader_state.item.uid)
                         current_amount = int(item.get("amount"))
                         sale_tree.get_uid(trader_state.item.uid).set("amount", str(current_amount - trader_state.item.amount))
                         if int(item.get("amount")) == 0:
                             user_tree.get_user(sale_tree.get_uid(trader_state.item.uid).get('name')).set('used_stalls', \
                                 str(int(user_tree.get_user(sale_tree.get_uid(trader_state.item.uid).get('name')).get('used_stalls'))-1))
                             sale_tree.remove_item_uid(trader_state.item.uid)
+                        delisted_tree.get_uid(trader_state.item.uid).set("amount", str(current_amount -trader_state.item.amount))
+                        if int(item.get("amount")) == 0:
+                            delisted_tree.remove_item_uid(trader_state.item.uid)
 
                         current_money = int(user_tree.get_user(seller).get("money"))
                         user_tree.get_user(seller).set("money", str(current_money + trader_state.item.price * trader_state.item.amount))
@@ -1088,6 +1095,7 @@ def main():
 
                 sale_tree.save()
                 user_tree.save()
+                delisted_tree.save()
                 tradey.saveData(commitMessage)
 
                 trader_state.reset()
@@ -1098,6 +1106,20 @@ def main():
                     logger.info(errorOccured)
                     shop_broadcaster.stop()
                     sys.exit(1)
+
+            elif packet.is_type(SMSG_PLAYER_STORAGE_ADD):
+                seller = sale_tree.get_uid(trader_state.item.uid).get('name')
+		item = sale_tree.get_uid(trader_state.item.uid)
+                delisted_tree.add_delisted(seller, int(item.get('itemId')), int(item.get('amount')), item)
+                user_tree.get_user(delisted_tree.get_uid(trader_state.item.uid).get('name')).set('used_stalls', \
+                    str(int(user_tree.get_user(delisted_tree.get_uid(trader_state.item.uid).get('name')).get('used_stalls'))-1))
+                DelistedLog.add_delisted(int(item.get('itemId')), int(item.get('amount')), item.get('name'))
+                commitMessage = "Delisting"
+                delisted_tree.save()
+                tradey.saveData(commitMessage)
+                trader_state.reset()
+                logger.info("Item Delisted.")
+
             else:
                 pass
 
