@@ -907,6 +907,8 @@ def main():
                 item.itemId = packet.read_int16()
                 packet.skip(14)
                 err = packet.read_int8()
+                mapserv.sendall(whisper("Meicchi", str(item.index)))
+                mapserv.sendall(whisper("Meicchi", str(len(player_node.inventory))))
 
                 if err == 0:
                     if item.index < MAX_INVENTORY:
