@@ -69,10 +69,11 @@ class ItemTree:
         for elem in self.root:
             self.u_id.add(int(elem.get("uid")))
 
-    def getId(self):
+    def getId(self, index):
         id_itter = 1
         while id_itter in self.u_id:
                 id_itter += 1
+	id_itter += index
         self.u_id.add(id_itter)
         return id_itter
 
@@ -87,7 +88,7 @@ class ItemTree:
         user.set("price", str(price))
         user.set("add_time", str(time.time()))
         user.set("amount", str(amount))
-        user.set("uid", str(self.getId()))
+        user.set("uid", str(self.getId(0)))
         self.save()
 
     def get_uid(self, uid):
@@ -124,11 +125,12 @@ class StackTree:
         for elem in self.root:
             self.u_id.add(int(elem.get("uid")))
 
-    def getId(self):
+    def getId(self, index):
         id_itter = 1
         while id_itter in self.u_id:
                 id_itter += 1
-        self.u_id.add(100+id_itter) # Setting Stack IDs over 100
+	id_itter += index
+        self.u_id.add(id_itter)
         return id_itter
 
     def remove_id(self, uid):
@@ -142,7 +144,7 @@ class StackTree:
         user.set("price", str(price))
         user.set("amount", str(amount))
         user.set("index", str(0))
-        user.set("uid", str(self.getId()))
+        user.set("uid", str(self.getId(100)))
         self.save()
 
     def get_uid(self, uid):
@@ -188,11 +190,12 @@ class DelistedTree:
         for elem in self.root:
             self.u_id.add(int(elem.get("uid")))
 
-    def getId(self):
+    def getId(self, index):
         id_itter = 1
         while id_itter in self.u_id:
                 id_itter += 1
-        self.u_id.add(300+id_itter) # Setting Delisted IDs over 300
+	id_itter += index
+        self.u_id.add(id_itter)
         return id_itter
 
     def remove_id(self, uid):
@@ -205,7 +208,7 @@ class DelistedTree:
         user.set("itemId", str(item_id))
         user.set("amount", str(amount))
         user.set("index", str(index))
-        user.set("uid", str(self.getId()))
+        user.set("uid", str(self.getId(300)))
         self.save()
 
     def get_uid(self, uid):
