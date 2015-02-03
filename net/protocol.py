@@ -74,3 +74,4 @@ inventory_offset = 2
 storage_offset = 1
 MAX_AMOUNT = 30000
 MAX_STORAGE = 300
+MAX_INVENTORY = 99

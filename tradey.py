@@ -112,17 +112,100 @@ class ItemTree:
         f.write(dom.toprettyxml('    '))
         f.close()
 
+class StackTree:
+    def __init__(self):
+	self.MIN = 101
+	self.MAX = 300
+        self.tree = ElementTree(file="data/stack.xml")
+        self.root = self.tree.getroot()
+        self.u_id = set()
+	self.nextid = self.MIN 
+
+        for elem in self.root:
+            self.u_id.add(int(elem.get("uid")))
+
+    def getId(self):
+        id_itter = 1
+        while id_itter in self.u_id:
+                id_itter += 1
+        self.u_id.add(100+id_itter) # Setting Stack IDs over 100
+        return id_itter
+
+    def remove_id(self, uid):
+        # Free up used id's.
+        self.u_id.remove(uid)
+
+    def add_item(self, name, item_id, amount, price):
+        user = SubElement(self.root, "item")
+        user.set("name", name)
+        user.set("itemId", str(item_id))
+        user.set("price", str(price))
+        user.set("amount", str(amount))
+        user.set("index", str(0))
+        user.set("uid", str(self.getId()))
+        self.save()
+
+    def get_uid(self, uid):
+        for elem in self.root:
+            if elem.get("uid") == str(uid):
+                return elem
+        return -10
+
+    def set_index(self, itemid, index):
+        for elem in self.root:
+            if elem.get("itemId") == str(itemid):
+                elem.set("index", str(index))
+                return 1
+        return -10
+
+    def remove_item_uid(self, uid):
+        for elem in self.root:
+            if elem.get("uid") == str(uid):
+                self.root.remove(elem)
+                self.remove_id(uid)
+		if self.nextid == self.MAX:
+			self.nextid = self.MIN
+		else:
+			self.nextid = uid+1
+                self.save()
+                return 1
+        return -10
+ 
+    def save(self):
+        # Be sure to call save() after any changes to the tree.
+        f = open('data/stack.xml', 'w')
+        dom = xml.dom.minidom.parseString(clean_xml(tostring(self.root)))
+        f.write(dom.toprettyxml('    '))
+        f.close()
+
+
 class DelistedTree:
     def __init__(self):
         self.tree = ElementTree(file="data/delisted.xml")
         self.root = self.tree.getroot()
+        self.u_id = set()
 
-    def add_delisted(self, name, item_id, amount, uid):
+        for elem in self.root:
+            self.u_id.add(int(elem.get("uid")))
+
+    def getId(self):
+        id_itter = 1
+        while id_itter in self.u_id:
+                id_itter += 1
+        self.u_id.add(300+id_itter) # Setting Delisted IDs over 300
+        return id_itter
+
+    def remove_id(self, uid):
+        # Free up used id's.
+        self.u_id.remove(uid)
+
+    def add_item(self, name, item_id, amount, index):
         user = SubElement(self.root, "item")
         user.set("name", name)
         user.set("itemId", str(item_id))
         user.set("amount", str(amount))
-        user.set("uid", str(uid))
+        user.set("index", str(index))
+        user.set("uid", str(self.getId()))
         self.save()
 
     def get_uid(self, uid):
