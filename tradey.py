@@ -143,7 +143,6 @@ class StackTree:
         user.set("itemId", str(item_id))
         user.set("price", str(price))
         user.set("amount", str(amount))
-        user.set("index", str(0))
         user.set("uid", str(self.getId(100)))
         self.save()
 
@@ -151,13 +150,6 @@ class StackTree:
         for elem in self.root:
             if elem.get("uid") == str(uid):
                 return elem
-        return -10
-
-    def set_index(self, itemid, index):
-        for elem in self.root:
-            if elem.get("itemId") == str(itemid):
-                elem.set("index", str(index))
-                return 1
         return -10
 
     def remove_item_uid(self, uid):
@@ -202,12 +194,11 @@ class DelistedTree:
         # Free up used id's.
         self.u_id.remove(uid)
 
-    def add_item(self, name, item_id, amount, index):
+    def add_item(self, name, item_id, amount):
         user = SubElement(self.root, "item")
         user.set("name", name)
         user.set("itemId", str(item_id))
         user.set("amount", str(amount))
-        user.set("index", str(index))
         user.set("uid", str(self.getId(300)))
         self.save()
 

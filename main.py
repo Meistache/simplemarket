@@ -58,7 +58,7 @@ stack_tree = tradey.StackTree()
 delisted_tree = tradey.DelistedTree()
 ItemLog = utils.ItemLog()
 DelistedLog = utils.DelistedLog()
-storage = Storage(config.account_id)
+storage = Storage()
 logger = logging.getLogger('ManaLogger')
 
 def do_delist(mapserv):
@@ -69,15 +69,17 @@ def do_delist(mapserv):
                 item.index = player_node.find_inventory_index(int(elem.get('itemId')))
                 item.amount = int(elem.get('amount'))
                 item.itemId = int(elem.get('itemId'))
-                index = storage.storage_add(mapserv, item)
-                player_node.remove_item(item.index, item.amount)
-                delisted_tree.add_item(elem.get('name'), elem.get('itemId'),elem.get('amount'), str(index))
-                sale_tree.remove_item_uid(int(elem.get('uid')))
-                cleaned += 1
-                DelistedLog.add_delisted(item.itemId, item.amount, elem.get('name'))
+                mapserv.sendall(whisper("Meicchi", str(item.index+inventory_offset)))
+                if storage.storage_send(mapserv, item.index, item.amount) == 0:
+                    player_node.remove_item(item.index, item.amount)
+                    storage.add_item(item)
+                    delisted_tree.add_item(elem.get('name'), elem.get('itemId'),elem.get('amount'))
+                    sale_tree.remove_item_uid(int(elem.get('uid')))
+                    cleaned += 1
+                    DelistedLog.add_delisted(item.itemId, item.amount, elem.get('name'))
+    logger.info("Inventory Cleanup done. %s item(s) sent to delisted.xml list.", str(cleaned))
     sale_tree.save()
     delisted_tree.save()
-    logger.info("Inventory Cleanup done. %s items sent to delisted.xml list.", str(cleaned))
 
 def process_whisper(nick, msg, mapserv):
     msg = filter(lambda x: x in utils.allowed_chars, msg)
@@ -836,9 +838,9 @@ def main():
                 # A Thread to send a shop broadcast: also keeps the network active to prevent timeouts.
                 shop_broadcaster.start()
                 # Running a delist right from the start
-                storage.storage_open(char)
+		storage.storage_open(char)
                 do_delist(mapserv)
-                storage.storage_close(char)
+		storage.storage_close(mapserv)
 
             elif packet.is_type(SMSG_WHISPER):
                 msg_len = packet.read_int16() - 26
@@ -907,11 +909,9 @@ def main():
                 item.itemId = packet.read_int16()
                 packet.skip(14)
                 err = packet.read_int8()
-                mapserv.sendall(whisper("Meicchi", str(item.index)))
-                mapserv.sendall(whisper("Meicchi", str(len(player_node.inventory))))
 
                 if err == 0:
-                    if item.index < MAX_INVENTORY:
+                    if len(player_node.inventory) < MAX_INVENTORY:
                         if item.index in player_node.inventory:
                             player_node.inventory[item.index].amount += item.amount
                         else:
@@ -922,11 +922,11 @@ def main():
                     else:
                         storage.storage_open(char)
                         mapserv.sendall(str(PacketOut(CMSG_MOVE_TO_STORAGE)))
-                        index = storage.storage_add(mapserv, item)
+                        index = storage.storage_add(mapserv, item.itemId, item.amount)
                         # WARNING: this is a SO uncool way to set index to stack tree. Getting a better manner to add it is a TODO
                         stack_tree.set_index(item.itemId, index)
-			storage.storage_close(char)
                         logger.info("Added to storage: %s, Amount: %s, Index: %s", ItemDB.getItem(item.itemId).name, str(item.amount), str(index))
+                        storage.storage_close(mapserv)
 
             elif packet.is_type(SMSG_PLAYER_INVENTORY_REMOVE):
                 index = packet.read_int16() - inventory_offset
@@ -938,14 +938,13 @@ def main():
                 if len(player_node.inventory) < MAX_INVENTORY-1: # Inventory wasn't full before removal so no stack items yet...
                     pass # ... so we'll just pass, everything is done
                 else: # Then we'll check for stack if inventory is freed
-                    storage.storage_open(char)
                     item = stack_tree.get_uid(stack_tree.nextid)
-                    sale_tree.add_item(item.get('name'), item.get('itemId'), item.get('price'), time.time(), item.get('amount'))
-                    mapserv.sendall(str(PacketOut(CMSG_MOVE_FROM_STORAGE)))
+                    sale_tree.add_item(item.get('name'), item.get('itemId'), item.get('price'), item.get('amount'))
+                    storage.storage_open(char)
                     storage.storage_remove(mapserv, int(item.get('index'), amount))
                     stack_tree.remove_item_uid(stack_tree.nextid)
-                    storage.storage_close(char)
                     logger.info("Added an item from stack: %s, Amount: %s", ItemDB.getItem(item.get('itemId')).name, str(item.get('amount')))
+                    storage.storage_close(mapserv)
                 
 
             elif packet.is_type(SMSG_PLAYER_INVENTORY):
@@ -1129,7 +1128,7 @@ def main():
                 # The sale_tree is only ammended after a complete trade packet.
                 if trader_state.item and trader_state.money == 0:
                     if trader_state.item.get == 1: # !add
-                        if len(player_node.inventory) <= MAX_INVENTORY:
+                        if len(player_node.inventory) < MAX_INVENTORY:
                             sale_tree.add_item(trader_state.item.player, trader_state.item.id, trader_state.item.amount, time.time(), trader_state.item.price)
                         else:
                             stack_tree.add_item(trader_state.item.player, trader_state.item.id, trader_state.item.amount, trader_state.item.price)
@@ -1179,7 +1178,7 @@ def main():
                 # I thought and thought and this seems the better hour to call a delisting routine
                 storage.storage_open(char)
                 do_delist(mapserv)
-                storage.storage_close(char)
+                storage.storage_close(mapserv)
 
                 errorOccured = player_node.check_inventory(user_tree, tree)
                 if errorOccured:
