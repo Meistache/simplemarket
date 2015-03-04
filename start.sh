@@ -4,8 +4,7 @@ MM_ACTIVE=1
 while [ $MM_ACTIVE != 0 ]
 do
     echo "Starting tradey...."
-    trap 'kill %1' SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
-      (python2.7 main.py >> error_log.txt)
+    python2.7 main.py >> error_log.txt
 
     if [ "$?" != "0" ]; then
         # Inventory/Money out of sync
