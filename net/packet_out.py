@@ -1,5 +1,6 @@
 from packet import *
 from protocol import *
+import config
 
 def emote(emoteId):
     emote_packet = PacketOut(CMSG_PLAYER_EMOTE)
@@ -15,7 +16,7 @@ def whisper(nick, message):
 
 def chat(text):
     chat_packet = PacketOut(CMSG_CHAT_MESSAGE)
-    mes = player_node.name + " : " + text
+    mes = config.name + " : " + text
     chat_packet.write_int16(len(mes) + 4 + 1)
     chat_packet.write_string(mes, len(mes) + 1)
     return str(chat_packet)

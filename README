@@ -1,5 +1,20 @@
-To get your own copy of tradey:
+Simplemarket (A ManaMarket simplified approach for local shops)
 
-cp config.py.template config.py
-cp item.xml data/
-cd data git init
+This is a simple bot based on ManaMarket code <https://github.com/themanaworld/manamarket>
+All you have to do to run it is copying config.py.template to config.py and set its variables:
+
+- server: the server you want to connect. Might work in any tmwAthena/Evol/manaserv based server
+- port: the port specified to login server
+- account: shop's user account
+- password: account's password
+- name: shop character name
+- character: slot in which character is (first slot is 0)
+
+Then run start.sh and you should be fine.
+
+Features
+
+* Automatic trade accept/decline which is not supported on ManaPlus by default
+* Allow you to receive and answer any whispers sent by customers through the console
+
+As simple as that.

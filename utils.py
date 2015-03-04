@@ -6,9 +6,6 @@
     This file is part of tradey, a trading bot in the mana world
     see www.themanaworld.org
 """
-from xml.etree.ElementTree import ElementTree
-from player import Item
-
 import time
 import mutex
 import threading
@@ -43,75 +40,14 @@ def encode_str(value, size):
 
     return output
 
-class ItemDB:
-    """
-    A simple class to look up information from the items.xml file.
-    """
-    def __init__(self):
-        print "Loading ItemDB"
-        self.item_names = {}
-        self.itemdb_file = ElementTree(file="data/items.xml")
-
-        for item in self.itemdb_file.getroot():
-            if item.get('name'):
-                file2 = ElementTree(file=item.get('name'))
-                for item2 in file2.getroot():
-                    if item2.get('name'):
-                        file3 = ElementTree(file=item2.get('name'))
-                        for item3 in file3.getroot():
-                            item_struct = Item()
-                            item_struct.name = item3.get('name')
-                            item_struct.weight = int(item3.get('weight', 0))
-                            if item3.get('type'):
-                                item_struct.type = item3.get('type')
-                                item_struct.description = item3.get('description')
-                                self.item_names[int(item3.get('id'))] = item_struct
-
-    def getItem(self, item_id):
-        return self.item_names[item_id]
-
-    def findId(self, name):
-        for item_id in self.item_names:
-            if self.item_names[item_id].name == name:
-                return item_id
-        return -10 #Not found
-
-class ItemLog:
-    """ Writes all sales to a log file, for later processing."""
-    def __init__(self):
-        self.log_file = 'data/logs/sale.log'
-
-    def add_item(self, item_id, amount, price, name):
-        file_node = open(self.log_file, 'a')
-        file_node.write(str(item_id)+" "+str(amount)+" "+str(price)+" "+str(time.time())+" "+name+"\n")
-        file_node.close()
-
-class DelistedLog:
-    """
-    Writes all delisted items to a log file.
-    """
-    def __init__(self):
-        self.log_file = 'data/logs/delist.log'
-
-    def add_delisted(self, item_id, amount, name):
-        file_node = open(self.log_file, 'a')
-        file_node.write(str(item_id)+" "+str(amount)+" "+str(time.time())+" "+name+"\n")
-        file_node.close()
-
 class TraderState:
     """ Stores information regarding a trade request"""
     def __init__(self):
         self.Trading = mutex.mutex()
-        self.item = 0
-        self.money = 0
-        self.complete = 0
         self.timer = 0
 
     def reset(self):
         self.Trading.unlock()
-        self.item = 0
-        self.complete = 0
-        self.money = 0
         self.timer = 0
 
 class Broadcast:
