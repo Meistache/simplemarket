@@ -1,0 +1,13 @@
+{
+    "email": {
+        "from": "crie.fernanda@gmail.com",
+        "to": "crie.fernanda@gmail.com"
+    },
+    "endpoints": [
+        {
+            "repo": "meistache/simplemarket",
+            "branch": "master",
+            "action": "something has been changed on the server",
+        }
+    ]
+}
